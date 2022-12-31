@@ -63,18 +63,24 @@ ARG USER_GID=$USER_UID
 RUN set -eux; \
     #
     # add non-free repo for intel drivers
-    echo deb http://deb.debian.org/debian bullseye main contrib non-free > /etc/apt/sources.list; \
-    echo deb http://deb.debian.org/debian-security/ bullseye-security main contrib non-free >> /etc/apt/sources.list; \
-    echo deb http://deb.debian.org/debian bullseye-updates main contrib non-free >> /etc/apt/sources.list; \
-    apt-get update; \
-    #
+    echo deb http://deb.debian.org/debian unstable main contrib non-free > /etc/apt/sources.list; \
+    echo 'Acquire::HTTP::Proxy "http://192.168.50.98:1080";' > /etc/apt/apt.conf.d/10-proxy.conf ; \
+    apt-get update;
+RUN set -eux; \
     # install dependencies
     apt-get install -y --no-install-recommends wget ca-certificates supervisor; \
-    apt-get install -y --no-install-recommends pulseaudio dbus-x11 xserver-xorg-video-dummy; \
-    apt-get install -y --no-install-recommends libcairo2 libxcb1 libxrandr2 libxv1 libopus0 libvpx6; \
+    apt-get install -y --no-install-recommends pulseaudio dbus-x11 xserver-xorg-core; \
+    apt-get install -y --no-install-recommends libcairo2 libxcb1 libxrandr2 libxv1 libopus0; \
     #
-    # intel driver + vaapi
-    apt-get install -y --no-install-recommends intel-media-va-driver-non-free libva2 vainfo; \
+    # vaapi
+    apt-get install -y --no-install-recommends libva2 vainfo; \
+    #
+    # nouveau (mesa) driver + firmware
+# apt-get install -y --no-install-recommends libgl1-mesa-glx libgl1-mesa-dri mesa-va-drivers mesa-vdpau-drivers firmware-misc-nonfree xserver-xorg-video-nouveau; \
+# nvidia proprietary driver
+# apt-get install -y --no-install-recommends firmware-misc-nonfree nvidia-driver; \
+    # install kmod
+    apt-get install -y --no-install-recommends kmod; \
     #
     # gst + vaapi plugin
     apt-get install -y --no-install-recommends libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
@@ -115,6 +121,11 @@ RUN set -eux; \
     # clean up
     apt-get clean -y; \
     rm -rf /var/lib/apt/lists/* /var/cache/apt/*
+
+ADD https://us.download.nvidia.com/XFree86/Linux-x86_64/525.60.11/NVIDIA-Linux-x86_64-525.60.11.run NVIDIA.run
+RUN set -eux; \
+  chmod +x NVIDIA.run; \
+  ./NVIDIA.run --no-kernel-modules --no-nvidia-modprobe  --no-drm --no-dkms --no-kernel-module-source  -q -a -n -s;
 
 #
 # copy config files
